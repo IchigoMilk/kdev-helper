@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Update .vscode/settings.json search excludes so only the selected ARCH stays searchable.
-# Usage: vscode/update_vscode_arch_excludes.sh [arch]
+# Usage: vscode/update_arch_excludes.sh [arch]
 # If no argument is provided, ARCH environment variable must be set.
 
 set -euo pipefail

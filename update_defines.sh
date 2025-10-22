@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Update .vscode/c_cpp_properties.json defines array from a Linux kernel .config.
-# Usage: vscode/update_vscode_defines.sh [path-to-.config] [path-to-c_cpp_properties.json]
+# Usage: vscode/update_defines.sh [path-to-.config] [path-to-c_cpp_properties.json]
 
 set -euo pipefail
 

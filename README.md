@@ -4,8 +4,8 @@ These helpers address two common pain points when reading the Linux kernel in VS
 
 ## What’s Included
 
-- `update_vscode_defines.sh` keeps `.vscode/c_cpp_properties.json` in sync with the active kernel `.config`, so IntelliSense sees the same configuration symbols as the build.
-- `update_vscode_arch_excludes.sh` rewrites `.vscode/settings.json` search excludes so only the architecture you care about stays visible.
+- `update_defines.sh` keeps `.vscode/c_cpp_properties.json` in sync with the active kernel `.config`, so IntelliSense sees the same configuration symbols as the build.
+- `update_arch_excludes.sh` rewrites `.vscode/settings.json` search excludes so only the architecture you care about stays visible.
 
 ## Getting Started
 
@@ -19,11 +19,11 @@ These helpers address two common pain points when reading the Linux kernel in VS
 
 1. After regenerating `.config` via `make menuconfig`, `make defconfig`, etc., run:
    ```sh
-   ./vscode/update_vscode_defines.sh
+   ./vscode/update_defines.sh
    ```
 2. When you change the target architecture (or set `ARCH` for cross builds), run:
    ```sh
-   ./vscode/update_vscode_arch_excludes.sh <arch>
+   ./vscode/update_arch_excludes.sh <arch>
    ```
    You can skip the argument if `ARCH` is already exported.
 
