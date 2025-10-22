@@ -6,7 +6,33 @@
 
 set -euo pipefail
 
-ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)
+resolve_root() {
+    local candidate
+
+    if [[ -n "${KDEV_HELPER_KERNEL_ROOT:-}" ]]; then
+        candidate=${KDEV_HELPER_KERNEL_ROOT}
+        if [[ ! -d "$candidate" ]]; then
+            echo "error: KDEV_HELPER_KERNEL_ROOT points to a missing directory: $candidate" >&2
+            exit 1
+        fi
+        (cd "$candidate" && pwd)
+        return
+    fi
+
+    local script_dir
+    script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+    for candidate in "$script_dir" "$script_dir/.." "$script_dir/../.."; do
+        if [[ -d "$candidate/arch" ]]; then
+            (cd "$candidate" && pwd)
+            return
+        fi
+    done
+
+    echo "error: unable to locate kernel root. Set KDEV_HELPER_KERNEL_ROOT to your kernel tree." >&2
+    exit 1
+}
+
+ROOT_DIR=$(resolve_root)
 TARGET_ARCH=${1:-${ARCH:-}}
 SETTINGS_PATH="$ROOT_DIR/.vscode/settings.json"
 ARCH_DIR="$ROOT_DIR/arch"
@@ -57,3 +83,4 @@ settings_path.parent.mkdir(parents=True, exist_ok=True)
 settings_path.write_text(json.dumps(settings, indent=4) + "\n")
 print(f"Updated search.exclude for ARCH={target_arch}.")
 PY
+

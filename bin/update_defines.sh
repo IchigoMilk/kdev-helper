@@ -5,7 +5,33 @@
 
 set -euo pipefail
 
-ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)
+resolve_root() {
+    local candidate
+
+    if [[ -n "${KDEV_HELPER_KERNEL_ROOT:-}" ]]; then
+        candidate=${KDEV_HELPER_KERNEL_ROOT}
+        if [[ ! -d "$candidate" ]]; then
+            echo "error: KDEV_HELPER_KERNEL_ROOT points to a missing directory: $candidate" >&2
+            exit 1
+        fi
+        (cd "$candidate" && pwd)
+        return
+    fi
+
+    local script_dir
+    script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+    for candidate in "$script_dir" "$script_dir/.." "$script_dir/../.."; do
+        if [[ -f "$candidate/.config" || -d "$candidate/arch" ]]; then
+            (cd "$candidate" && pwd)
+            return
+        fi
+    done
+
+    echo "error: unable to locate kernel root. Set KDEV_HELPER_KERNEL_ROOT to your kernel tree." >&2
+    exit 1
+}
+
+ROOT_DIR=$(resolve_root)
 CONFIG_PATH=${1:-"$ROOT_DIR/.config"}
 PROPERTIES_PATH=${2:-"$ROOT_DIR/.vscode/c_cpp_properties.json"}
 
@@ -62,3 +88,4 @@ for entry in props.get("configurations", []):
 props_path.write_text(json.dumps(props, indent=4) + "\n")
 print(f"Updated defines for {len(props.get('configurations', []))} configuration(s) using {config_path}.")
 PY
+
