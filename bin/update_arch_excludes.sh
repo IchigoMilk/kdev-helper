@@ -1,86 +1,16 @@
 #!/usr/bin/env bash
 
-# Update .vscode/settings.json search excludes so only the selected ARCH stays searchable.
-# Usage: vscode/update_arch_excludes.sh [arch]
-# If no argument is provided, ARCH environment variable must be set.
+# Hide architectures other than the one being built from VS Code.
+# Run with --help for the full option list.
 
 set -euo pipefail
 
-resolve_root() {
-    local candidate
+_here=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 
-    if [[ -n "${KDEV_HELPER_KERNEL_ROOT:-}" ]]; then
-        candidate=${KDEV_HELPER_KERNEL_ROOT}
-        if [[ ! -d "$candidate" ]]; then
-            echo "error: KDEV_HELPER_KERNEL_ROOT points to a missing directory: $candidate" >&2
-            exit 1
-        fi
-        (cd "$candidate" && pwd)
-        return
-    fi
-
-    local script_dir
-    script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-    for candidate in "$script_dir" "$script_dir/.." "$script_dir/../.."; do
-        if [[ -d "$candidate/arch" ]]; then
-            (cd "$candidate" && pwd)
-            return
-        fi
-    done
-
-    echo "error: unable to locate kernel root. Set KDEV_HELPER_KERNEL_ROOT to your kernel tree." >&2
-    exit 1
-}
-
-ROOT_DIR=$(resolve_root)
-TARGET_ARCH=${1:-${ARCH:-}}
-SETTINGS_PATH="$ROOT_DIR/.vscode/settings.json"
-ARCH_DIR="$ROOT_DIR/arch"
-
-if [[ -z "${TARGET_ARCH}" ]]; then
-    echo "error: ARCH not provided. Pass it as an argument or export ARCH before running." >&2
-    exit 1
-fi
-
-if [[ ! -d "$ARCH_DIR" ]]; then
-    echo "error: missing arch directory at $ARCH_DIR" >&2
-    exit 1
-fi
-
-if [[ ! -d "$ARCH_DIR/$TARGET_ARCH" ]]; then
-    echo "error: arch/$TARGET_ARCH not found. Check the ARCH value." >&2
-    exit 1
-fi
-
-python3 - "$ARCH_DIR" "$TARGET_ARCH" "$SETTINGS_PATH" <<'PY'
-import json
-import pathlib
+PYTHONPATH="$_here/../lib${PYTHONPATH:+:$PYTHONPATH}" \
+    exec python3 -c '
 import sys
-
-arch_root = pathlib.Path(sys.argv[1])
-target_arch = sys.argv[2]
-settings_path = pathlib.Path(sys.argv[3])
-
-arch_dirs = sorted([p.name for p in arch_root.iterdir() if p.is_dir()])
-
-try:
-    settings = json.loads(settings_path.read_text())
-except FileNotFoundError:
-    settings = {}
-except Exception as exc:  # pragma: no cover - diagnostic path
-    raise SystemExit(f"failed to parse {settings_path}: {exc}")
-
-existing_excludes = settings.get("search.exclude", {})
-preserved = {k: v for k, v in existing_excludes.items() if not k.startswith("arch/")}
-
-for name in arch_dirs:
-    pattern = f"arch/{name}/**"
-    preserved[pattern] = name != target_arch
-
-settings["search.exclude"] = preserved
-
-settings_path.parent.mkdir(parents=True, exist_ok=True)
-settings_path.write_text(json.dumps(settings, indent=4) + "\n")
-print(f"Updated search.exclude for ARCH={target_arch}.")
-PY
-
+sys.argv[0] = "update_arch_excludes"   # so --help shows the command, not "-c"
+from kdev import cli_excludes
+sys.exit(cli_excludes.main())
+' "$@"
